@@ -5,6 +5,12 @@ pipeline {
         DOCKERHUB = credentials('dockerhub-cred')
 
         DOCKERHUB_REPO = "thien19012004/cloudhcmus_lab01_fe"
+
+        EC2_SSH   = credentials('ec2-ssh') 
+        EC2_USER  = "ubuntu"
+        EC2_HOST  = "16.176.179.11"
+        APP_PORT  = "2048" 
+
     }
 
     stages {
@@ -37,6 +43,22 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent (credentials: ['ec2-ssh']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                            docker pull ${DOCKERHUB_REPO}:latest &&
+                            docker stop fe-app || true &&
+                            docker rm fe-app || true &&
+                            docker run -d -p ${APP_PORT}:${APP_PORT} --name fe-app ${DOCKERHUB_REPO}:latest
+                        '
+                    """
+                }
+            }
+        }
+
     }
 
     post {
